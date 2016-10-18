@@ -14,6 +14,8 @@ var touchScreen = {};
 var path = {};
 // The bezier curve
 var bezier = {};
+// Precision value
+var precision = 0.01;
 // Background setup
 background = new Rect(0, 0, stage.options.width, stage.options.height);
 background.attr('fillColor', 'grey');
@@ -54,7 +56,7 @@ function getNewPath(pos, points) {
  */
 function casteljau() {
   var bezierPoints = [];
-  for (var i = 0; i <= 1; i+=0.01) {
+  for (var i = 0; i <= 1; i+=precision) {
     var t = getNewPath(i, points);
     while(t.length>4) {
       t = getNewPath(i, t);
@@ -80,9 +82,9 @@ function drawLine() {
 
 // When clicked generates new control point and
 // draws the line if it has more than 2 points
-touchScreen.on('click', function(evt) {
+touchScreen.on('pointerup', function(evt) {
   points.push(evt.x);
   points.push(evt.y);
-  if(points.length>=4)
+  if(points.length>4)
     drawLine();
 });
