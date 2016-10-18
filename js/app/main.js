@@ -113,7 +113,7 @@ touchScreen.on('pointerup', function(evt) {
   // lower its precision for rendering real time
   // the changes and after returns the precision
   // to it's normal state and draw the new curve
-  c.on('drag', function(evt) {
+  c.on('multi:drag', function(evt) {
     var index = this.index;
     circles[index]._attributes.x = evt.x;
     circles[index]._attributes.y = evt.y;
