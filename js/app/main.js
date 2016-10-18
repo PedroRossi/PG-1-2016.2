@@ -3,17 +3,20 @@ var color = {
   background: 'grey',
   curve: 'red',
   line: 'white',
-  circle: 'blue'
+  circle: 'blue',
+  text: 'black'
 }
 // Control points array based on the user clicks
 var points = [];
+// Text points array representing the blossoming
+var textPoints = [];
 // Circles representing user clicks
 var circles = [];
 // The radius of the circle
-var circleSize = 10;
+var circleSize = 5;
 // The real background with color
 var background = {};
-// The touchScreen for receiving the user click's
+// The screen for touching
 var touchScreen = {};
 // The line path
 var path = {};
@@ -25,8 +28,8 @@ var precision = 0.01;
 background = new Rect(0, 0, stage.options.width, stage.options.height);
 background.attr('fillColor', color.background);
 background.addTo(stage);
-// TouchScreen setup for ensuring
-// that the paths do not overleap
+
+// TouchScreen setup
 touchScreen = new Rect(0, 0, stage.options.width, stage.options.height);
 touchScreen.addTo(stage);
 
@@ -37,7 +40,7 @@ touchScreen.addTo(stage);
  * @param c2 is the second x or y
  */
 function getNewPoint(pos, c1, c2) {
-  return c1 - ((c1 - c2)*pos);
+  return (Math.round((c1 - ((c1 - c2)*pos))*100))/100;
 }
 
 /**
@@ -61,14 +64,35 @@ function getNewPath(pos, points) {
  */
 function casteljau() {
   var bezierPoints = [];
+  var paths = [];
+  var blossomTextPoints = [];
+  // TODO PD later
+  // console.log(paths[0]._segments);
+  // console.log(paths);
   for (var i = 0; i <= 1; i+=precision) {
-    var t = getNewPath(i, points);
-    while(t.length>4) {
-      t = getNewPath(i, t);
-    }
-    bezierPoints.push(getNewPoint(i, t[0], t[2]));
-    bezierPoints.push(getNewPoint(i, t[1], t[3]));
+    i = (Math.round(i*100))/100;
+    var np = points;
+    do {
+      np = getNewPath(i, np);
+      if(i == 0.5) {
+        var p = new Path(np).stroke('yellow',1);
+        paths.push(p);
+      }
+    } while(np.length>4);
+    bezierPoints.push(getNewPoint(i, np[0], np[2]));
+    bezierPoints.push(getNewPoint(i, np[1], np[3]));
   }
+  // TODO Point numering system
+  // paths.forEach(function(p) {
+  //   for (var i = 0; i < p._segments.length; i++) {
+  //     var str = 'P'+i+(i+1);
+  //     var t = new Text(str).attr({
+  //       x: p._segments[i][1]-7,
+  //       y: p._segments[i][2]-7
+  //     });
+  //     blossomTextPoints.push(t);
+  //   }
+  // });
   bezierPoints.push(points[points.length-2]);
   bezierPoints.push(points[points.length-1]);
   bezier = new Path(bezierPoints)
@@ -77,6 +101,15 @@ function casteljau() {
   var stageObjects = [background, path, bezier, touchScreen];
   circles.forEach(function(c) {
     stageObjects.push(c);
+  });
+  paths.forEach(function(p) {
+    stageObjects.push(p);
+  });
+  textPoints.forEach(function(t) {
+    stageObjects.push(t);
+  });
+  blossomTextPoints.forEach(function(b) {
+    stageObjects.push(b);
   });
   stage.children(stageObjects);
 }
@@ -91,8 +124,11 @@ function drawLine() {
     casteljau();
   else {
     var stageObjects = [background, path, touchScreen]
-    circles.forEach(function(circle) {
-      stageObjects.push(circle);
+    circles.forEach(function(c) {
+      stageObjects.push(c);
+    });
+    textPoints.forEach(function(t) {
+      stageObjects.push(t);
     });
     stage.children(stageObjects);
   }
@@ -106,8 +142,18 @@ touchScreen.on('pointerup', function(evt) {
   var c = new Circle(evt.x, evt.y, circleSize)
     .fill(color.circle);
 
-  c.index = circles.length;
+  var t = new Text('P'+circles.length)
+    .attr({
+      textFillColor: color.text,
+      x: evt.x-7,
+      y: evt.y-7
+    });
+
+  t.index = c.index = circles.length;
   circles.push(c);
+  textPoints.push(t);
+
+
 
   // When the circle is dragged around, the stage
   // lower its precision for rendering real time
@@ -119,11 +165,15 @@ touchScreen.on('pointerup', function(evt) {
     circles[index]._attributes.y = evt.y;
     points[index*2] = evt.x;
     points[(index*2)+1] = evt.y;
+    textPoints[index].attr({
+      x: evt.x-7,
+      y: evt.y-7
+    });
     if(points.length>2) {
-      precision = 0.1;
+      // precision = 0.1;
       drawLine();
-      precision = 0.01;
-      drawLine();
+      // precision = 0.01;
+      // drawLine();
     }
   });
 
@@ -135,15 +185,29 @@ touchScreen.on('pointerup', function(evt) {
       circles[i].index--;
     }
     circles.splice(this.index,1);
+    textPoints.splice(this.index,1);
     points.splice(2*this.index,2);
     if(points.length>2)
       drawLine();
     else
-      stage.children([background, touchScreen, circles[0]]);
+      stage.children([background, touchScreen, circles[0], textPoints[0]]);
   });
 
   if(points.length>2)
     drawLine();
   else
-    stage.addChild(c);
+    stage.children([t, c, touchScreen]);
 });
+
+
+// var text = new Text('Hi');
+// text.attr({
+//   fontFamily: 'Arial, sans-serif',
+//   fontSize: 20,
+//   textFillColor: 'red',
+//   textStrokeColor: 'yellow',
+//   textStrokeWidth: 1,
+//   x: 50,
+//   y: 50
+// });
+// text.addTo(stage);
