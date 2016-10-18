@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Blossom</title>
+    <script src="js/lib/bonsai-0.4.1.min.js" charset="utf-8"></script>
+    <script src="js/lib/jquery-3.1.1.min.js" charset="utf-8"></script>
+    <style media="screen">
+      body { margin: 0px; background-color: grey; }
+      canvas { width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <div id="main">
+
+    </div>
+    <script>
+      var instance = bonsai.run(document.getElementById('main'), {
+        url: 'js/app/main.js',
+        width: $(window).width()-5,
+        height: $(window).height()-5
+      });
+      console.log(instance);
+      // $(window).on('resize', function() {
+      //   instance.destroy();
+      //   instance = bonsai.run(document.getElementById('main'), {
+      //     url: 'js/app/main.js',
+      //     width: $(window).width()-20,
+      //     height: $(window).height()-20
+      //   });
+      // });
+    </script>
+  </body>
+</html>
