@@ -6,8 +6,9 @@ var color = {
   circle: 'blue',
   text: 'black',
   casteljau: {
-    circle: 'yellow',
-    line: 'yellow'
+    line: 'red',
+    area: 'yellow',
+    smooth: 'yellow'
   }
 }
 // Control points array based on the user clicks
@@ -18,16 +19,18 @@ var textPoints = [];
 var circles = [];
 // The radius of the circle
 var circleSize = 5;
+// The bossom area paths
+var paths = [];
 // The real background with color
 var background = {};
 // The screen for touching
 var touchScreen = {};
-var path = {};
 // The line path
+var path = {};
 // The bezier curve
 var bezier = {};
 // Precision value
-var precision = 0.007;
+var precision = 0.01;
 // Background setup
 background = new Rect(0, 0, stage.options.width, stage.options.height);
 background.attr('fillColor', color.background);
@@ -54,7 +57,7 @@ function getNewPoint(pos, c1, c2) {
  * @param pos is the starting position of each vector
  * @param points is the points array for reference
  */
-function getNewPath(pos, points) {
+function casteljau(pos, points) {
   var newPoints = [];
   for (var i = 0; i < points.length-2; i+=2) {
     newPoints.push(getNewPoint(pos, points[i], points[i+2]));
@@ -64,23 +67,49 @@ function getNewPath(pos, points) {
 }
 
 /**
+ * Smooths blossom area by aplying casteljau to lower levels
+ * @param points array
+ * @param precision used for smoothing the area
+ * @param initial is the i initial position
+ * @param final is the i limit
+ */
+function smoothArea(points, precision, initial, final) {
+  for (var i = initial; i <= final; i+=precision) {
+    i = (Math.round(i*100))/100;
+    var np = casteljau(i, points);
+    var p = new Path(np).stroke(color.casteljau.smooth, 0.1);
+    paths.push(p);
+  }
+}
+
+/**
  * Gets the bezier points and draws the bezier curve
  */
-function casteljau() {
-  var paths = [];
+function getBezierCurve(points, precision) {
+  var bezierPoints = [];
   // TODO PD later
   // console.log(paths[0]._segments);
   // console.log(paths);
+  paths = [];
   for (var i = 0; i <= 1; i+=precision) {
-    i = (Math.round(i*1000))/1000;
-    var np = points;
-    do {
-      np = getNewPath(Math.random(), np);
-      var p = new Path(np).stroke(color.casteljau.line,10);
+    i = (Math.round(i*100))/100;
+    var np = casteljau(i, points);
+    while(np.length>2) {
+      if(i > 0.3 && i < 0.6) smoothArea(np, 0.01*(np.length/2), i, 1-i);
+      var p = new Path(np).stroke(color.casteljau.area, 0.1);
       paths.push(p);
-    } while(np.length>4);
+      np = casteljau(i, np);
+    }
+    bezierPoints.push(np[0]);
+    bezierPoints.push(np[1]);
   }
-  // Organizing the objects at the stage
+  bezier = new Path(bezierPoints).stroke(color.casteljau.line,1);
+}
+
+/**
+ * Organize stage objects for better view
+ */
+function organizeStage() {
   var stageObjects = [background, path];
   paths.forEach(function(p) {
     stageObjects.push(p);
@@ -88,6 +117,7 @@ function casteljau() {
   textPoints.forEach(function(t) {
     stageObjects.push(t);
   });
+  stageObjects.push(bezier);
   stageObjects.push(touchScreen);
   circles.forEach(function(c) {
     stageObjects.push(c);
@@ -101,9 +131,10 @@ function casteljau() {
 function drawLine() {
   path = new Path(points)
     .stroke(color.line,1);
-  if(points.length>4)
-    casteljau();
-  else {
+  if(points.length>4) {
+    getBezierCurve(points, precision);
+    organizeStage();
+  } else {
     var stageObjects = [background, path, touchScreen]
     circles.forEach(function(c) {
       stageObjects.push(c);
@@ -160,11 +191,22 @@ touchScreen.on('click', function(evt) {
     stage.children([t, c, touchScreen]);
 });
 
-// for (var i = 0; i < 100; i++) {
-//   var x = Math.random()*(Math.random()>0.5?1000:100);
-//   var y = (Math.random()*(Math.random()>0.5?1000:100));
-//   // console.log(x + ' ' + y);
-//   points.push(x);
-//   points.push(y);
-// }
-// drawLine();
+/**
+ * Set 4 arbitrary points and draws the line
+ * (Used for debuggin)
+ */
+function customPoints() {
+  points = [
+     80, 353,
+    429, 117,
+    467, 521,
+    789, 255
+  ];
+  for (var i = 0; i < points.length; i+=2) {
+    var c = new Circle(points[i],points[i+1],circleSize);
+    c.fill(color.circle);
+    circles.push(c);
+  }
+  drawLine();
+}
+//customPoints();
