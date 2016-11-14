@@ -8,12 +8,29 @@
     <style media="screen">
       body { margin: 10px; background-color: grey; }
       canvas { width: 100%; height: 100%; }
+      #main {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      #textBox {
+        position: relative;
+      }
     </style>
   </head>
   <body>
-    <!-- <button type="button" name="button" onclick="logger();">Oieee</button> -->
-    <div id="main">
-
+    <div id="main"></div>
+    <div id="textBox">
+      <p>
+        Area (0..1)
+        <button type="button" name="button" onclick="sendAreaParameters()">Go</button>
+      </p>
+      <label> Initial
+        <input type="number" id="initial" style="width: 30px;">
+      </label>
+      <label> Final
+        <input type="number" id="final" style="width: 30px;">
+      </label>
     </div>
     <script>
       var instance = bonsai.run(document.getElementById('main'), {
@@ -21,6 +38,17 @@
         width: $(window).width()-5,
         height: $(window).height()-5
       });
+
+      function sendAreaParameters() {
+        var initial = document.getElementById("initial").value;
+        var final = document.getElementById("final").value;
+        instance.sendMessage('setParameters', {
+          data: {
+            initial,
+            final
+          }
+        });
+      }
     </script>
   </body>
 </html>

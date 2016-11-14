@@ -11,6 +11,10 @@ var color = {
     smooth: 'yellow'
   }
 }
+// Initial area parameter
+var initial = 0;
+// Final area parameter
+var final = 1;
 // Control points array based on the user clicks
 var points = [];
 // Text points array representing the blossoming
@@ -31,6 +35,8 @@ var path = {};
 var bezier = {};
 // Precision value
 var precision = 0.01;
+// Used for noticing when drag is done
+var time = Date.now();
 // Background setup
 background = new Rect(0, 0, stage.options.width, stage.options.height);
 background.attr('fillColor', color.background);
@@ -47,7 +53,7 @@ touchScreen.addTo(stage);
  * @param c2 is the second x or y
  */
 function getNewPoint(pos, c1, c2) {
-  return (Math.round((c1 - ((c1 - c2)*pos))*1000))/1000;
+  return (Math.round((c1 - ((c1 - c2)*pos))*100))/100;
 }
 
 /**
@@ -57,7 +63,7 @@ function getNewPoint(pos, c1, c2) {
  * @param pos is the starting position of each vector
  * @param points is the points array for reference
  */
-function casteljau(pos, points) {
+function deCasteljau(pos, points) {
   var newPoints = [];
   for (var i = 0; i < points.length-2; i+=2) {
     newPoints.push(getNewPoint(pos, points[i], points[i+2]));
@@ -67,38 +73,18 @@ function casteljau(pos, points) {
 }
 
 /**
- * Smooths blossom area by aplying casteljau to lower levels
- * @param points array
- * @param precision used for smoothing the area
- * @param initial is the i initial position
- * @param final is the i limit
- */
-function smoothArea(points, precision, initial, final) {
-  for (var i = initial; i <= final; i+=precision) {
-    i = (Math.round(i*100))/100;
-    var np = casteljau(i, points);
-    var p = new Path(np).stroke(color.casteljau.smooth, 0.1);
-    paths.push(p);
-  }
-}
-
-/**
  * Gets the bezier points and draws the bezier curve
  */
-function getBezierCurve(points, precision) {
+function getBezierCurve(points, precision, initial, final) {
   var bezierPoints = [];
-  // TODO PD later
-  // console.log(paths[0]._segments);
-  // console.log(paths);
   paths = [];
   for (var i = 0; i <= 1; i+=precision) {
     i = (Math.round(i*100))/100;
-    var np = casteljau(i, points);
+    var np = deCasteljau(i, points);
     while(np.length>2) {
-      if(i > 0.3 && i < 0.6) smoothArea(np, 0.01*(np.length/2), i, 1-i);
       var p = new Path(np).stroke(color.casteljau.area, 0.1);
-      paths.push(p);
-      np = casteljau(i, np);
+      if(i>=initial && i<=final)paths.push(p);
+      np = deCasteljau(i, np);
     }
     bezierPoints.push(np[0]);
     bezierPoints.push(np[1]);
@@ -132,7 +118,7 @@ function drawLine() {
   path = new Path(points)
     .stroke(color.line,1);
   if(points.length>4) {
-    getBezierCurve(points, precision);
+    getBezierCurve(points, precision, initial, final);
     organizeStage();
   } else {
     var stageObjects = [background, path, touchScreen]
@@ -185,23 +171,60 @@ touchScreen.on('click', function(evt) {
       stage.children([background, touchScreen, circles[0], textPoints[0]]);
   });
 
+  // When the circle is dragged around, the stage
+  // lower its precision for rendering real time
+  // the changes
+  c.on('multi:drag', function(evt) {
+    var index = this.index;
+    circles[index]._attributes.x = evt.x;
+    circles[index]._attributes.y = evt.y;
+    textPoints[index]._attributes.x = evt.x - 7;
+    textPoints[index]._attributes.y = evt.y - 7;
+    points[index*2] = evt.x;
+    points[(index*2)+1] = evt.y;
+    if(points.length>2) {
+      precision = 0.05;
+      drawLine();
+    }
+  });
+
+  // After drag state for re rendering the line
+  // with normal precision
+  c.on('pointerup', function() {
+    precision = 0.01;
+    drawLine();
+  });
+
   if(points.length>2)
     drawLine();
   else
     stage.children([t, c, touchScreen]);
 });
 
+// Gets initial and final parameter from user
+stage.on('message:setParameters', function(data) {
+  initial = data.data.initial;
+  final = data.data.final;
+  if(points.length>2)
+    drawLine();
+});
+
 /**
- * Set 4 arbitrary points and draws the line
+ * Set n arbitrary points and draws the line
  * (Used for debuggin)
  */
 function customPoints() {
   points = [
-     80, 353,
-    429, 117,
-    467, 521,
-    789, 255
+    //  80, 353,
+    // 429, 117,
+    // 467, 521,
+    // 789, 255
   ];
+  var n = 50;
+  while(n--) {
+    points.push(Math.random()*(Math.random()>0.5?100:1000));
+    points.push(Math.random()*(Math.random()>0.5?100:1000));
+  }
   for (var i = 0; i < points.length; i+=2) {
     var c = new Circle(points[i],points[i+1],circleSize);
     c.fill(color.circle);
@@ -209,4 +232,4 @@ function customPoints() {
   }
   drawLine();
 }
-//customPoints();
+// customPoints();
